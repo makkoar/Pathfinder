@@ -9,11 +9,8 @@ public static class Pathfinder
     /// <param name="end">Конечная точка поиска пути.</param>
     /// <param name="map">Двумерный булевый массив, где <c>true</c> означает проходимую клетку, а <c>false</c> — препятствие.</param>
     /// <param name="invertXY">Флаг, указывающий, следует ли инвертировать оси X и Y при обработке карты.</param>
-    /// <returns>Список точек типа <see cref="Point"/>, представляющий найденный путь от начальной до конечной точки.<br/>Если путь не найден, возвращается пустой список.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Выбрасывается, если начальная или конечная точка выходит за пределы карты.</exception>
-    /// <exception cref="ArgumentNullException">Выбрасывается, если карта <c>map</c> равна <c>null</c>.</exception>
-    /// <remarks>Использует <see cref="List{T}"/> для хранения последовательности точек пути.<br/>Реализует алгоритм поиска A* для поиска кратчайшего пути.</remarks>
-    public static List<Point> FindPath(Point start, Point end, bool[,] map, bool invertXY = true)
+    /// <returns>Очередь точек типа <see cref="Point"/>, представляющая найденный путь от начальной до конечной точки.<br/>Если путь не найден, возвращается пустая очередь.</returns>
+    public static Queue<Point> FindPath(Point start, Point end, bool[,] map, bool invertXY = true)
     {
 #if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(map);
@@ -23,27 +20,19 @@ public static class Pathfinder
         int height = map.GetLength(0); // строки (Y)
         int width = map.GetLength(1);  // столбцы (X)
 
-        /// <summary>Проверяет, является ли клетка проходимой с учётом инверсии осей.</summary>
-        /// <param name="x">Координата X.</param>
-        /// <param name="y">Координата Y.</param>
-        /// <returns>Значение типа <c>bool</c>, указывающее, проходима ли клетка.</returns>
         bool IsWalkable(int x, int y) =>
             invertXY ? map[y, x] : map[x, y];
 
-        /// <summary>Проверяет, находится ли клетка в пределах карты с учётом инверсии осей.</summary>
-        /// <param name="x">Координата X.</param>
-        /// <param name="y">Координата Y.</param>
-        /// <returns>Значение типа <c>bool</c>, указывающее, находится ли клетка в пределах карты.</returns>
         bool InBounds(int x, int y) =>
             invertXY ? (x >= 0 && x < width && y >= 0 && y < height)
                      : (y >= 0 && y < height && x >= 0 && x < width);
 
         if (!InBounds(start.X, start.Y)) throw new ArgumentOutOfRangeException(nameof(start));
         if (!InBounds(end.X, end.Y)) throw new ArgumentOutOfRangeException(nameof(end));
-        if (!IsWalkable(start.X, start.Y) || !IsWalkable(end.X, end.Y)) return [];
+        if (!IsWalkable(start.X, start.Y) || !IsWalkable(end.X, end.Y)) return new Queue<Point>();
 
         SortedSet<(int f, int h, Point point)> openSet = new(Comparer<(int f, int h, Point point)>.Create((a, b) =>
-        {
+        {   
             int cmp = a.f.CompareTo(b.f);
             if (cmp == 0) cmp = a.h.CompareTo(b.h);
             if (cmp == 0) cmp = a.point.X.CompareTo(b.point.X);
@@ -56,10 +45,6 @@ public static class Pathfinder
             [start] = 0
         };
 
-        /// <summary>Вычисляет расстояние Чебышёва между двумя точками.</summary>
-        /// <param name="a">Первая точка.</param>
-        /// <param name="b">Вторая точка.</param>
-        /// <returns>Расстояние Чебышёва между точками типа <c>int</c>.</returns>
         int Heuristic(Point a, Point b)
         {
             int dx = Math.Abs(a.X - b.X);
@@ -80,15 +65,14 @@ public static class Pathfinder
             Point current = openSet.Min.point;
             if (current == end)
             {
-                List<Point> path = [];
+                var path = new Stack<Point>();
                 while (cameFrom.ContainsKey(current))
                 {
-                    path.Add(current);
+                    path.Push(current);
                     current = cameFrom[current];
                 }
-                path.Add(start);
-                path.Reverse();
-                return path;
+                path.Push(start);
+                return new Queue<Point>(path);
             }
             openSet.Remove(openSet.Min);
 
@@ -106,7 +90,7 @@ public static class Pathfinder
                 }
 
                 Point neighbor = new(nx, ny);
-                int stepCost = (dx != 0 && dy != 0) ? 1414 : 1000; // 1.414 и 1.0, умноженные на 1000
+                int stepCost = (dx != 0 && dy != 0) ? 1414 : 1000;
                 int tentativeG = gScore[current] + stepCost;
                 if (!gScore.TryGetValue(neighbor, out int neighborG) || tentativeG < neighborG)
                 {
@@ -117,7 +101,7 @@ public static class Pathfinder
                 }
             }
         }
-        return [];
+        return new Queue<Point>();
     }
 
     /// <summary>Выполняет поиск кратчайшего пути между двумя точками на карте типа float[,].</summary>
@@ -125,11 +109,8 @@ public static class Pathfinder
     /// <param name="end">Конечная точка поиска пути.</param>
     /// <param name="map">Двумерный массив типа float, где максимальное значение считается стеной.</param>
     /// <param name="invertXY">Флаг, указывающий, следует ли инвертировать оси X и Y при обработке карты.</param>
-    /// <returns>Список точек типа <see cref="Point"/>, представляющий найденный путь от начальной до конечной точки.<br/>Если путь не найден, возвращается пустой список.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Выбрасывается, если начальная или конечная точка выходит за пределы карты.</exception>
-    /// <exception cref="ArgumentNullException">Выбрасывается, если карта <c>map</c> равна <c>null</c>.</exception>
-    /// <remarks>Использует <see cref="List{T}"/> для хранения последовательности точек пути.<br/>Реализует алгоритм поиска A* с учётом стоимости клетки.</remarks>
-    public static List<Point> FindPath(Point start, Point end, float[,] map, bool invertXY = true)
+    /// <returns>Очередь точек типа <see cref="Point"/>, представляющая найденный путь от начальной до конечной точки.<br/>Если путь не найден, возвращается пустая очередь.</returns>
+    public static Queue<Point> FindPath(Point start, Point end, float[,] map, bool invertXY = true)
     {
 #if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(map);
@@ -148,27 +129,19 @@ public static class Pathfinder
                 if (v > max) max = v;
             }
 
-        /// <summary>Проверяет, является ли клетка стеной.</summary>
-        /// <param name="x">Координата X.</param>
-        /// <param name="y">Координата Y.</param>
-        /// <returns>Значение типа <c>bool</c>, указывающее, является ли клетка стеной.</returns>
         bool IsWall(int x, int y)
         {
             float v = invertXY ? map[y, x] : map[x, y];
             return v >= max;
         }
 
-        /// <summary>Проверяет, находится ли клетка в пределах карты с учётом инверсии осей.</summary>
-        /// <param name="x">Координата X.</param>
-        /// <param name="y">Координата Y.</param>
-        /// <returns>Значение типа <c>bool</c>, указывающее, находится ли клетка в пределах карты.</returns>
         bool InBounds(int x, int y) =>
             invertXY ? (x >= 0 && x < width && y >= 0 && y < height)
                      : (y >= 0 && y < height && x >= 0 && x < width);
 
         if (!InBounds(start.X, start.Y)) throw new ArgumentOutOfRangeException(nameof(start));
         if (!InBounds(end.X, end.Y)) throw new ArgumentOutOfRangeException(nameof(end));
-        if (IsWall(start.X, start.Y) || IsWall(end.X, end.Y)) return [];
+        if (IsWall(start.X, start.Y) || IsWall(end.X, end.Y)) return new Queue<Point>();
 
         SortedSet<(float f, float h, Point point)> openSet = new(Comparer<(float f, float h, Point point)>.Create((a, b) =>
         {
@@ -184,15 +157,11 @@ public static class Pathfinder
             [start] = 0
         };
 
-        /// <summary>Вычисляет расстояние Чебышёва между двумя точками.</summary>
-        /// <param name="a">Первая точка.</param>
-        /// <param name="b">Вторая точка.</param>
-        /// <returns>Расстояние Чебышёва между точками типа <c>float</c>.</returns>
         float Heuristic(Point a, Point b)
         {
             int dx = Math.Abs(a.X - b.X);
             int dy = Math.Abs(a.Y - b.Y);
-            return Math.Max(dx, dy); // Chebyshev distance
+            return Math.Max(dx, dy);
         }
 
         openSet.Add((Heuristic(start, end), Heuristic(start, end), start));
@@ -208,15 +177,14 @@ public static class Pathfinder
             Point current = openSet.Min.point;
             if (current == end)
             {
-                List<Point> path = [];
+                var path = new Stack<Point>();
                 while (cameFrom.ContainsKey(current))
                 {
-                    path.Add(current);
+                    path.Push(current);
                     current = cameFrom[current];
                 }
-                path.Add(start);
-                path.Reverse();
-                return path;
+                path.Push(start);
+                return new Queue<Point>(path);
             }
             openSet.Remove(openSet.Min);
 
@@ -226,7 +194,6 @@ public static class Pathfinder
                 int ny = current.Y + dy;
                 if (!InBounds(nx, ny) || IsWall(nx, ny)) continue;
 
-                // Защита от среза углов
                 if (dx != 0 && dy != 0)
                 {
                     if (IsWall(current.X + dx, current.Y) || IsWall(current.X, current.Y + dy))
@@ -249,7 +216,7 @@ public static class Pathfinder
                 }
             }
         }
-        return [];
+        return new Queue<Point>();
     }
 
     /// <summary>Выполняет поиск кратчайшего пути между двумя точками на карте типа int[,].</summary>
@@ -257,11 +224,8 @@ public static class Pathfinder
     /// <param name="end">Конечная точка поиска пути.</param>
     /// <param name="map">Двумерный массив типа int, где максимальное значение считается стеной.</param>
     /// <param name="invertXY">Флаг, указывающий, следует ли инвертировать оси X и Y при обработке карты.</param>
-    /// <returns>Список точек типа <see cref="Point"/>, представляющий найденный путь от начальной до конечной точки.<br/>Если путь не найден, возвращается пустой список.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Выбрасывается, если начальная или конечная точка выходит за пределы карты.</exception>
-    /// <exception cref="ArgumentNullException">Выбрасывается, если карта <c>map</c> равна <c>null</c>.</exception>
-    /// <remarks>Использует <see cref="List{T}"/> для хранения последовательности точек пути.<br/>Реализует алгоритм поиска A* с учётом стоимости клетки.</remarks>
-    public static List<Point> FindPath(Point start, Point end, int[,] map, bool invertXY = true)
+    /// <returns>Очередь точек типа <see cref="Point"/>, представляющая найденный путь от начальной до конечной точки.<br/>Если путь не найден, возвращается пустая очередь.</returns>
+    public static Queue<Point> FindPath(Point start, Point end, int[,] map, bool invertXY = true)
     {
 #if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(map);
@@ -280,27 +244,19 @@ public static class Pathfinder
                 if (v > max) max = v;
             }
 
-        /// <summary>Проверяет, является ли клетка стеной.</summary>
-        /// <param name="x">Координата X.</param>
-        /// <param name="y">Координата Y.</param>
-        /// <returns>Значение типа <c>bool</c>, указывающее, является ли клетка стеной.</returns>
         bool IsWall(int x, int y)
         {
             int v = invertXY ? map[y, x] : map[x, y];
             return v >= max;
         }
 
-        /// <summary>Проверяет, находится ли клетка в пределах карты с учётом инверсии осей.</summary>
-        /// <param name="x">Координата X.</param>
-        /// <param name="y">Координата Y.</param>
-        /// <returns>Значение типа <c>bool</c>, указывающее, находится ли клетка в пределах карты.</returns>
         bool InBounds(int x, int y) =>
             invertXY ? (x >= 0 && x < width && y >= 0 && y < height)
                      : (y >= 0 && y < height && x >= 0 && x < width);
 
         if (!InBounds(start.X, start.Y)) throw new ArgumentOutOfRangeException(nameof(start));
         if (!InBounds(end.X, end.Y)) throw new ArgumentOutOfRangeException(nameof(end));
-        if (IsWall(start.X, start.Y) || IsWall(end.X, end.Y)) return [];
+        if (IsWall(start.X, start.Y) || IsWall(end.X, end.Y)) return new Queue<Point>();
 
         SortedSet<(float f, float h, Point point)> openSet = new(Comparer<(float f, float h, Point point)>.Create((a, b) =>
         {
@@ -316,15 +272,11 @@ public static class Pathfinder
             [start] = 0
         };
 
-        /// <summary>Вычисляет расстояние Чебышёва между двумя точками.</summary>
-        /// <param name="a">Первая точка.</param>
-        /// <param name="b">Вторая точка.</param>
-        /// <returns>Расстояние Чебышёва между точками типа <c>float</c>.</returns>
         float Heuristic(Point a, Point b)
         {
             int dx = Math.Abs(a.X - b.X);
             int dy = Math.Abs(a.Y - b.Y);
-            return Math.Max(dx, dy); // Chebyshev distance
+            return Math.Max(dx, dy);
         }
 
         openSet.Add((Heuristic(start, end), Heuristic(start, end), start));
@@ -340,15 +292,14 @@ public static class Pathfinder
             Point current = openSet.Min.point;
             if (current == end)
             {
-                List<Point> path = [];
+                var path = new Stack<Point>();
                 while (cameFrom.ContainsKey(current))
                 {
-                    path.Add(current);
+                    path.Push(current);
                     current = cameFrom[current];
                 }
-                path.Add(start);
-                path.Reverse();
-                return path;
+                path.Push(start);
+                return new Queue<Point>(path);
             }
             openSet.Remove(openSet.Min);
 
@@ -380,7 +331,7 @@ public static class Pathfinder
                 }
             }
         }
-        return [];
+        return new Queue<Point>();
     }
 
     /// <summary>Возвращает цвет консоли для значения карты на основе градиента.</summary>

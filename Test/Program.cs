@@ -30,7 +30,7 @@ internal class Program
         };
         Point start = new(0, 0);
         Point end = new(5, 12);
-        List<Point> path = Pathfinder.FindPath(start, end, maze);
+        Queue<Point> path = Pathfinder.FindPath(start, end, maze);
         Console.WriteLine(string.Join(" -> ", path));
         Pathfinder.PrintMap(maze, path);
         int[,] mazeInt = new int[30, 30]
