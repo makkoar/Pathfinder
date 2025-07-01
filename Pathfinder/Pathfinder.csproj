@@ -7,6 +7,8 @@
 		<RootNamespace>SkyRez.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
 	</PropertyGroup>
 	<ItemGroup>
-	  <Folder Include="Structs\" />
+	  <Compile Remove="Structs\**" />
+	  <EmbeddedResource Remove="Structs\**" />
+	  <None Remove="Structs\**" />
 	</ItemGroup>
 </Project>

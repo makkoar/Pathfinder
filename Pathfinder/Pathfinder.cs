@@ -56,20 +56,23 @@ public static class Pathfinder
             [start] = 0
         };
 
-        /// <summary>Вычисляет манхэттенское расстояние между двумя точками.</summary>
+        /// <summary>Вычисляет расстояние Чебышёва между двумя точками.</summary>
         /// <param name="a">Первая точка.</param>
         /// <param name="b">Вторая точка.</param>
-        /// <returns>Манхэттенское расстояние между точками типа <c>int</c>.</returns>
-        int Heuristic(Point a, Point b) => Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y);
+        /// <returns>Расстояние Чебышёва между точками типа <c>int</c>.</returns>
+        int Heuristic(Point a, Point b)
+        {
+            int dx = Math.Abs(a.X - b.X);
+            int dy = Math.Abs(a.Y - b.Y);
+            return 1000 * Math.Max(dx, dy); // Chebyshev distance
+        }
 
         openSet.Add((Heuristic(start, end), Heuristic(start, end), start));
 
         (int dx, int dy)[] directions =
         [
-            (0, -1), // вверх
-            (0, 1),  // вниз
-            (-1, 0), // влево
-            (1, 0)   // вправо
+            (0, -1), (0, 1), (-1, 0), (1, 0),
+            (-1, -1), (1, -1), (-1, 1), (1, 1)
         ];
 
         while (openSet.Count > 0)
@@ -95,9 +98,16 @@ public static class Pathfinder
                 int ny = current.Y + dy;
                 if (!InBounds(nx, ny) || !IsWalkable(nx, ny)) continue;
 
-                Point neighbor = new(nx, ny);
+                // Защита от среза углов
+                if (dx != 0 && dy != 0)
+                {
+                    if (!IsWalkable(current.X + dx, current.Y) || !IsWalkable(current.X, current.Y + dy))
+                        continue;
+                }
 
-                int tentativeG = gScore[current] + 1;
+                Point neighbor = new(nx, ny);
+                int stepCost = (dx != 0 && dy != 0) ? 1414 : 1000; // 1.414 и 1.0, умноженные на 1000
+                int tentativeG = gScore[current] + stepCost;
                 if (!gScore.TryGetValue(neighbor, out int neighborG) || tentativeG < neighborG)
                 {
                     cameFrom[neighbor] = current;
@@ -174,17 +184,23 @@ public static class Pathfinder
             [start] = 0
         };
 
-        /// <summary>Вычисляет манхэттенское расстояние между двумя точками.</summary>
+        /// <summary>Вычисляет расстояние Чебышёва между двумя точками.</summary>
         /// <param name="a">Первая точка.</param>
         /// <param name="b">Вторая точка.</param>
-        /// <returns>Манхэттенское расстояние между точками типа <c>float</c>.</returns>
-        float Heuristic(Point a, Point b) => Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y);
+        /// <returns>Расстояние Чебышёва между точками типа <c>float</c>.</returns>
+        float Heuristic(Point a, Point b)
+        {
+            int dx = Math.Abs(a.X - b.X);
+            int dy = Math.Abs(a.Y - b.Y);
+            return Math.Max(dx, dy); // Chebyshev distance
+        }
 
         openSet.Add((Heuristic(start, end), Heuristic(start, end), start));
 
         (int dx, int dy)[] directions =
         [
-            (0, -1), (0, 1), (-1, 0), (1, 0)
+            (0, -1), (0, 1), (-1, 0), (1, 0),
+            (-1, -1), (1, -1), (-1, 1), (1, 1)
         ];
 
         while (openSet.Count > 0)
@@ -210,10 +226,18 @@ public static class Pathfinder
                 int ny = current.Y + dy;
                 if (!InBounds(nx, ny) || IsWall(nx, ny)) continue;
 
+                // Защита от среза углов
+                if (dx != 0 && dy != 0)
+                {
+                    if (IsWall(current.X + dx, current.Y) || IsWall(current.X, current.Y + dy))
+                        continue;
+                }
+
                 Point neighbor = new(nx, ny);
                 float v = invertXY ? map[ny, nx] : map[nx, ny];
                 float norm = (max - min) > 0 ? (v - min) / (max - min) : 0;
-                float cost = 1 + norm;
+                float stepCost = (dx != 0 && dy != 0) ? 1.4142f : 1f;
+                float cost = stepCost + norm;
 
                 float tentativeG = gScore[current] + cost;
                 if (!gScore.TryGetValue(neighbor, out float neighborG) || tentativeG < neighborG)
@@ -292,17 +316,23 @@ public static class Pathfinder
             [start] = 0
         };
 
-        /// <summary>Вычисляет манхэттенское расстояние между двумя точками.</summary>
+        /// <summary>Вычисляет расстояние Чебышёва между двумя точками.</summary>
         /// <param name="a">Первая точка.</param>
         /// <param name="b">Вторая точка.</param>
-        /// <returns>Манхэттенское расстояние между точками типа <c>float</c>.</returns>
-        float Heuristic(Point a, Point b) => Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y);
+        /// <returns>Расстояние Чебышёва между точками типа <c>float</c>.</returns>
+        float Heuristic(Point a, Point b)
+        {
+            int dx = Math.Abs(a.X - b.X);
+            int dy = Math.Abs(a.Y - b.Y);
+            return Math.Max(dx, dy); // Chebyshev distance
+        }
 
         openSet.Add((Heuristic(start, end), Heuristic(start, end), start));
 
         (int dx, int dy)[] directions =
         [
-            (0, -1), (0, 1), (-1, 0), (1, 0)
+            (0, -1), (0, 1), (-1, 0), (1, 0),
+            (-1, -1), (1, -1), (-1, 1), (1, 1)
         ];
 
         while (openSet.Count > 0)
@@ -328,10 +358,17 @@ public static class Pathfinder
                 int ny = current.Y + dy;
                 if (!InBounds(nx, ny) || IsWall(nx, ny)) continue;
 
+                if (dx != 0 && dy != 0)
+                {
+                    if (IsWall(current.X + dx, current.Y) || IsWall(current.X, current.Y + dy))
+                        continue;
+                }
+
                 Point neighbor = new(nx, ny);
                 int v = invertXY ? map[ny, nx] : map[nx, ny];
                 float norm = (max - min) > 0 ? (v - min) / (float)(max - min) : 0;
-                float cost = 1 + norm;
+                float stepCost = (dx != 0 && dy != 0) ? 1.4142f : 1f;
+                float cost = stepCost + norm;
 
                 float tentativeG = gScore[current] + cost;
                 if (!gScore.TryGetValue(neighbor, out float neighborG) || tentativeG < neighborG)
